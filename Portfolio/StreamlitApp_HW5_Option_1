@@ -36,6 +36,7 @@ from src.feature_utils import extract_features
 aws_id = st.secrets["aws_credentials"][""]
 aws_secret = st.secrets["aws_credentials"][""]
 aws_token = st.secrets["aws_credentials"][""]
+aws_bucket = st.secrets["aws_credentials"]["kendra-stock-app-2026"]
 aws_endpoint = st.secrets["aws_credentials"]["https://s3.amazonaws.com"]
 
 # AWS Session Management
@@ -53,6 +54,7 @@ sm_session = sagemaker.Session(boto_session=session)
 
 # Data & Model Configuration
 df_features = extract_features()
+
 MODEL_INFO = {
         "endpoint": aws_endpoint,
         "explainer": 'explainer.shap',
@@ -90,7 +92,8 @@ def load_shap_explainer(_session, bucket, key, local_path):
 
 # Prediction Logic
 def call_model_api(input_df):
-predictor = Predictor(
+
+    predictor = Predictor(
         endpoint_name=MODEL_INFO["endpoint"],
         sagemaker_session=sm_session,
         serializer=NumpySerializer(),
@@ -141,9 +144,16 @@ if submitted:
     # Prepare data
     base_df = df_features
     input_df = pd.concat([base_df, pd.DataFrame([data_row], columns=base_df.columns)])
-res, status = call_model_api(user_inputs)
+    
+    res, status = call_model_api(input_df)
     if status == 200:
         st.metric("Prediction Result", res)
-        display_explanation(user_inputs,session, aws_bucket)
+        display_explanation(input_df,session, aws_bucket)
     else:
         st.error(res)
+
+
+
+
+
+
